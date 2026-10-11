@@ -1,0 +1,17 @@
+[
+{
+"test_case": "English greeting",
+"message": "Hello! Can you help me?",
+"expected_behavior": "The bot replies politely in English."
+},
+{
+"test_case": "Bengali support request",
+"message": "আমি বাংলা ভাষায় কথা বলতে চাই। আপনি কি সাহায্য করতে পারবেন?",
+"expected_behavior": "The bot replies politely in Bengali."
+},
+{
+"test_case": "Follow-up question",
+"message": "Can you explain that in more detail?",
+"expected_behavior": "The bot attempts to use available conversation context."
+}
+]
