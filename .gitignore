@@ -7,3 +7,10 @@ client_secret.json
 __pycache__/
 .venv/
 venv/
+
+# Local workflow exports - do not publish
+telegram-support-final-export*.json
+
+# Temporary workflow versions
+workflow/*-new.json
+workflow/*-working.json
