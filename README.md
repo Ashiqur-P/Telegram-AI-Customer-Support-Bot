@@ -214,6 +214,22 @@ Telegram-AI-Customer-Support-Bot/
 
 These results document the completed Day 1 and Day 2 tests. They do not imply that every possible Telegram message type, network condition, or production scenario has been tested.
 
+### Day 12 — RAG Integration and Human Handoff
+
+| Test Case | Result |
+| :--- | :--- |
+| Bengali answerable question using RAG | PASS |
+| English answerable question using RAG | PASS |
+| Unanswerable question fallback | PASS |
+| Support ticket creation in Google Sheets | PASS |
+| Owner notification for new support ticket | PASS |
+| English conversation memory | PASS |
+| Non-text message fallback (previously verified) | PASS |
+
+The RAG integration uses the separate Advanced RAG Knowledge Base Assistant workflow. Unanswerable questions are escalated through a Google Sheets support ticket and owner notification.
+
+The English and Bengali answer tests confirm the tested examples only. They do not establish overall answer accuracy or production reliability.
+
 ## 🔒 Security Notes
 
 - Never publish API keys, bot tokens, passwords, or other secrets.
