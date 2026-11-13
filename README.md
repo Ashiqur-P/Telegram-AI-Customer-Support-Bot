@@ -8,7 +8,7 @@ An AI-powered customer support chatbot built with **n8n**, **Google Gemini**, an
 
 This project demonstrates how to automate customer support using a Telegram bot connected to Google Gemini through an n8n workflow.
 
-Users can send messages directly to Telegram and receive AI-generated responses. The workflow also handles non-text messages and AI processing failures with customer-friendly fallback messages and owner notifications.
+Users can send messages directly to Telegram and receive AI-generated responses. The workflow also integrates a separate RAG Knowledge Base Assistant for knowledge-based answers and human handoff when the required information is unavailable. It handles non-text messages and AI processing failures with customer-friendly fallback messages and owner notifications.
 
 ## ✨ Features
 
@@ -16,48 +16,73 @@ Users can send messages directly to Telegram and receive AI-generated responses.
 - **Bengali and English Support:** Responds in the same language as the user's message.
 - **Telegram Integration:** Receives customer messages and sends replies automatically.
 - **Conversation Memory:** Uses n8n Simple Memory to retain relevant context within a conversation.
+- **RAG Knowledge Base Integration:** Retrieves relevant information from a separate Advanced RAG Knowledge Base Assistant workflow before generating knowledge-based responses.
+- **Human Handoff:** Escalates questions that cannot be answered from the knowledge base through a support ticket.
+- **Support Ticket Creation:** Records unanswered customer questions in Google Sheets.
+- **Owner Notification:** Notifies the bot owner about new support tickets and workflow errors.
 - **Non-Text Message Handling:** Sends polite fallback replies for messages without text, including image, voice, and sticker messages.
 - **Typing Indicator:** Displays a typing action while the AI response is being processed.
-- **Customer-Facing Error Handling:** Sends a polite fallback message when Gemini processing fails.
-- **Owner Error Notification:** Sends a separate Telegram error notification to the bot owner.
+- **Customer-Facing Error Handling:** Sends a polite fallback message when RAG or Gemini processing fails.
+- **Owner Error Notification:** Sends separate Telegram error notifications to the bot owner.
 
 ## 📐 Workflow Architecture
 
 ```text
 Customer Message
-       |
-       v
+     |
+     v
 Telegram Trigger
-       |
-       v
-    Has text?
-       |
-       +---- False ----> Send non-text reply
-       |
-       +---- True
-              |
-              v
-            Typing
-              |
-              v
-           AI Agent <------ Google Gemini Chat Model
-              |             (models/gemini-3-flash-preview)
-              |             Temperature: 0.3
-              |             Simple Memory
-              |
-              +---- Success ----> Send a text message
-              |
-              +---- Error ------> Send customer fallback reply
-              |
-              +---- Error ------> Notify owner
+     |
+     v
+   Has text?
+     |
+     +---- False ----> Send non-text reply
+     |
+     +---- True
+           |
+           v
+          Typing
+           |
+           v
+         Ask RAG
+           |
+           v
+       Answer found?
+           |
+           +---- Yes ----> AI Agent <------ Google Gemini Chat Model
+           |                  |             (models/gemini-3-flash-preview)
+           |                  |             Temperature: 0.3
+           |                  |             Simple Memory
+           |                  |
+           |                  +---- Success ----> Send a text message
+           |                  |
+           |                  +---- Error ------> Customer fallback reply
+           |                  |
+           |                  +---- Error ------> Notify owner
+           |
+           +---- No ------> Send handoff reply
+           |                       |
+           |                       v
+           |                Create Support Ticket
+           |                       |
+           |                       v
+           |                Notify owner - New Ticket
+           |
+           +---- RAG Error -> Send RAG Error Reply
+                                  |
+                                  +----> Notify owner
 ```
 
 **Workflow notes:**
 
 - The `Has text?` node separates text messages from messages without text.
 - Any message without text (for example, image, voice, or sticker) is handled by `Send non-text reply`.
-- Text messages proceed through the Typing node and AI Agent.
-- The AI Agent uses Google Gemini and Simple Memory.
+- Text messages proceed through the Typing node and `Ask RAG` HTTP Request node.
+- The RAG workflow retrieves relevant knowledge and returns an answer when supporting information is available.
+- If an answer is available, the Telegram workflow passes the question and knowledge base result to the AI Agent.
+- The AI Agent uses Google Gemini and Simple Memory to generate a response.
+- If the knowledge base cannot answer a question, the workflow sends a handoff reply, creates a support ticket in Google Sheets, and notifies the bot owner.
+- If the RAG request fails, a separate error-handling path sends a customer-facing fallback and notifies the owner.
 - On AI Agent failure, the Error output connects separately to the customer fallback and owner notification paths.
 
 ## 🛠️ Technology Stack
@@ -68,6 +93,8 @@ Telegram Trigger
 | **Telegram Bot API** | Receiving and sending messages |
 | **Google Gemini** | AI-powered response generation |
 | **Simple Memory** | Conversation context |
+| **Advanced RAG Knowledge Base Assistant** | Knowledge retrieval and answer generation |
+| **Google Sheets** | Support ticket storage |
 | **Docker** | Running n8n locally |
 | **Cloudflare Tunnel** | Exposing the local n8n instance for webhook access |
 
@@ -108,11 +135,12 @@ The workflow uses Telegram's typing action to let customers know that the bot is
 
 ## ⚠️ Error Handling
 
-When Gemini processing fails:
+When RAG or Gemini processing fails:
 
-- The AI Agent follows its Error output.
-- One error-handling path sends a polite fallback message to the customer.
-- A separate error-handling path sends a Telegram notification to the bot owner.
+- The relevant workflow follows its configured Error output.
+- The RAG error-handling path sends a polite fallback message to the customer.
+- The AI Agent error-handling path sends a polite fallback message to the customer.
+- Separate error-handling paths send Telegram notifications to the bot owner.
 - The owner notification includes workflow execution information when available.
 
 Example customer fallback:
@@ -156,9 +184,6 @@ Telegram-AI-Customer-Support-Bot/
 │   └── day2-error-alert.png
 │
 ├── workflow/
-│   ├── telegram-ai-customer-support-workflow-new.json
-│   ├── telegram-ai-customer-support-workflow-working.json
-│   ├── telegram-ai-customer-support-workflow.json
 │   └── telegram-support-bot.json
 │
 ├── .gitignore
@@ -172,6 +197,8 @@ Telegram-AI-Customer-Support-Bot/
 - A Telegram bot created using BotFather
 - Telegram API credentials configured in n8n
 - Google Gemini API key and credentials configured in n8n
+- Advanced RAG Knowledge Base Assistant workflow configured and accessible
+- Google Sheets configured for support ticket storage
 - Cloudflare Tunnel or another suitable HTTPS webhook endpoint
 
 ## 🚀 Setup Guide
@@ -183,8 +210,10 @@ Telegram-AI-Customer-Support-Bot/
 5. Configure Google Gemini credentials in n8n.
 6. Import the workflow JSON file into n8n.
 7. Verify the node connections and credentials.
-8. Configure a reachable HTTPS webhook endpoint.
-9. Publish the workflow and send a test message to the Telegram bot.
+8. Configure the Advanced RAG Knowledge Base Assistant workflow and its required API access.
+9. Configure Google Sheets credentials and the support ticket spreadsheet.
+10. Configure a reachable HTTPS webhook endpoint.
+11. Publish the workflows and send a test message to the Telegram bot.
 
 **Known limitation:** The free Cloudflare Tunnel URL changes on each restart, so the webhook must be re-registered (set `WEBHOOK_URL`, then unpublish and publish the workflow).
 
@@ -214,7 +243,7 @@ Telegram-AI-Customer-Support-Bot/
 
 These results document the completed Day 1 and Day 2 tests. They do not imply that every possible Telegram message type, network condition, or production scenario has been tested.
 
-### Day 12 — RAG Integration and Human Handoff
+### Day 12 — RAG Integration and Human Handoff Tests
 
 | Test Case | Result |
 | :--- | :--- |
@@ -223,12 +252,12 @@ These results document the completed Day 1 and Day 2 tests. They do not imply th
 | Unanswerable question fallback | PASS |
 | Support ticket creation in Google Sheets | PASS |
 | Owner notification for new support ticket | PASS |
-| English conversation memory | PASS |
+| English conversation memory tested | PASS |
 | Non-text message fallback (previously verified) | PASS |
 
 The RAG integration uses the separate Advanced RAG Knowledge Base Assistant workflow. Unanswerable questions are escalated through a Google Sheets support ticket and owner notification.
 
-The English and Bengali answer tests confirm the tested examples only. They do not establish overall answer accuracy or production reliability.
+The English and Bengali answer tests confirm the tested examples only. English conversation memory was tested; Bengali conversation memory has not been claimed as tested. These results do not establish overall answer accuracy or production reliability.
 
 ## 🔒 Security Notes
 
@@ -252,14 +281,11 @@ The English and Bengali answer tests confirm the tested examples only. They do n
 
 Potential future improvements include:
 
-- Connect a business knowledge base using **RAG (Retrieval-Augmented Generation)**.
-- Integrate Google Sheets or a CRM.
-- Add a human-agent escalation path.
-- Improve logging and monitoring.
-- Add configurable business-specific support instructions.
-- Use a stable HTTPS endpoint instead of a temporary tunnel URL.
-
-RAG knowledge base integration is not currently connected to this Telegram bot. These items are potential extensions, not completed features.
+- Develop a Messenger/WhatsApp version.
+- Integrate with a CRM system to manage customer records and support interactions.
+- Generate weekly support activity reports.
+- Configure a stable HTTPS URL instead of a temporary tunnel URL.
+- Add conversation summaries.
 
 ## ✍️ Author
 
