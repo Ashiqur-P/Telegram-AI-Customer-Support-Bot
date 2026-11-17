@@ -10,6 +10,12 @@ This project demonstrates how to automate customer support using a Telegram bot 
 
 Users can send messages directly to Telegram and receive AI-generated responses. The workflow also integrates a separate RAG Knowledge Base Assistant for knowledge-based answers and human handoff when the required information is unavailable. It handles non-text messages and AI processing failures with customer-friendly fallback messages and owner notifications.
 
+## 🎬 Demo Video
+
+[Watch the demo (1:09)](https://youtu.be/iylHyhB7btg)
+
+Screen recording with text-to-speech narration. Demo environment with sample data.
+
 ## ✨ Features
 
 - **AI-Powered Responses:** Uses Google Gemini to understand questions and generate helpful answers.
