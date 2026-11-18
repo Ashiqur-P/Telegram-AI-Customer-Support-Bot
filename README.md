@@ -249,7 +249,7 @@ Telegram-AI-Customer-Support-Bot/
 
 These results document the completed Day 1 and Day 2 tests. They do not imply that every possible Telegram message type, network condition, or production scenario has been tested.
 
-### Day 12 — RAG Integration and Human Handoff Tests
+### RAG Integration and Human Handoff Tests
 
 | Test Case | Result |
 | :--- | :--- |
